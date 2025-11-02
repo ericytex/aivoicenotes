@@ -324,7 +324,7 @@ app.post('/api/notes', authenticate, (req, res) => {
     const { title, content, audio_url, duration, language, tags, note_type } = req.body;
     
     // Generate ID if not provided (client usually provides it)
-    const id = req.body.id || crypto.randomUUID();
+    const id = req.body.id || randomUUID();
     const now = new Date().toISOString();
 
     db.prepare(`
