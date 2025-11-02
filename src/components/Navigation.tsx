@@ -22,9 +22,12 @@ const Navigation = () => {
   const { signOut, user, isAuthenticated } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Redirect to auth if not authenticated (except for auth and shared routes)
+  // Redirect to auth if not authenticated (except for auth, shared, and root landing page)
   useEffect(() => {
-    if (!isAuthenticated && !location.pathname.startsWith('/auth') && !location.pathname.startsWith('/shared')) {
+    if (!isAuthenticated && 
+        location.pathname !== '/' && 
+        !location.pathname.startsWith('/auth') && 
+        !location.pathname.startsWith('/shared')) {
       navigate('/auth');
     }
   }, [isAuthenticated, location.pathname, navigate]);
@@ -42,8 +45,8 @@ const Navigation = () => {
     navigate('/auth');
   };
 
-  // Don't show navigation on auth or shared pages
-  if (location.pathname.startsWith('/auth') || location.pathname.startsWith('/shared')) {
+  // Don't show navigation on auth, shared, or root landing page
+  if (location.pathname === '/' || location.pathname.startsWith('/auth') || location.pathname.startsWith('/shared')) {
     return null;
   }
 
