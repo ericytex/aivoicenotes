@@ -45,15 +45,82 @@ fi
 
 echo -e "${GREEN}✅ Docker: $(docker --version)${NC}"
 
-# Check Docker Compose
-if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+# Check Docker Compose (prefer plugin version, fallback to standalone)
+COMPOSE_CMD=""
+if docker compose version &> /dev/null; then
+    COMPOSE_CMD="docker compose"
+    echo -e "${GREEN}✅ Docker Compose (plugin): $(docker compose version)${NC}"
+elif command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose"
+    echo -e "${GREEN}✅ Docker Compose (standalone): $(docker-compose --version)${NC}"
+else
     echo -e "${YELLOW}📦 Installing Docker Compose...${NC}"
-    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    sudo chmod +x /usr/local/bin/docker-compose
-    echo -e "${GREEN}✅ Docker Compose installed${NC}"
+    # Try plugin installation first (for newer Docker)
+    if docker version &> /dev/null; then
+        # Install as plugin
+        sudo mkdir -p /usr/local/lib/docker/cli-plugins
+        sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/lib/docker/cli-plugins/docker-compose
+        sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+        if docker compose version &> /dev/null; then
+            COMPOSE_CMD="docker compose"
+            echo -e "${GREEN}✅ Docker Compose (plugin) installed${NC}"
+        fi
+    fi
+    
+    # Fallback to standalone if plugin didn't work
+    if [ -z "$COMPOSE_CMD" ]; then
+        echo -e "${YELLOW}Installing Docker Compose (standalone)...${NC}"
+        # Get latest version
+        COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -oP '"tag_name": "\K[^"]+' | head -1)
+        if [ -z "$COMPOSE_VERSION" ]; then
+            COMPOSE_VERSION="v2.24.5"  # Fallback to known working version
+        fi
+        ARCH=$(uname -m)
+        [ "$ARCH" = "x86_64" ] && ARCH="x86_64" || ARCH="aarch64"
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        DOWNLOAD_URL="https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-${OS}-${ARCH}"
+        
+        sudo curl -L "$DOWNLOAD_URL" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        
+        # Verify it's actually a binary, not an HTML error page
+        if file /usr/local/bin/docker-compose | grep -q "executable"; then
+            if docker-compose --version &> /dev/null 2>&1; then
+                COMPOSE_CMD="docker-compose"
+                echo -e "${GREEN}✅ Docker Compose (standalone) installed${NC}"
+            else
+                echo -e "${RED}❌ Docker Compose installed but not working${NC}"
+                echo -e "${YELLOW}Please install manually: https://docs.docker.com/compose/install/${NC}"
+                exit 1
+            fi
+        else
+            echo -e "${RED}❌ Failed to download Docker Compose binary${NC}"
+            echo -e "${YELLOW}Attempting alternative installation method...${NC}"
+            # Try pip installation as fallback
+            if command -v pip3 &> /dev/null; then
+                sudo pip3 install docker-compose
+                if command -v docker-compose &> /dev/null && docker-compose --version &> /dev/null 2>&1; then
+                    COMPOSE_CMD="docker-compose"
+                    echo -e "${GREEN}✅ Docker Compose installed via pip${NC}"
+                fi
+            fi
+            
+            if [ -z "$COMPOSE_CMD" ]; then
+                echo -e "${RED}❌ Failed to install Docker Compose${NC}"
+                echo -e "${YELLOW}Please install manually:${NC}"
+                echo "   sudo apt-get update && sudo apt-get install -y docker-compose-plugin"
+                echo "   OR: https://docs.docker.com/compose/install/"
+                exit 1
+            fi
+        fi
+    fi
 fi
 
-echo -e "${GREEN}✅ Docker Compose: $(docker compose version 2>/dev/null || docker-compose --version)${NC}"
+# Verify installation
+if [ -z "$COMPOSE_CMD" ]; then
+    echo -e "${RED}❌ Docker Compose not found${NC}"
+    exit 1
+fi
 
 # Check Node.js (for building frontend)
 if ! command -v node &> /dev/null; then
@@ -153,11 +220,11 @@ echo -e "${GREEN}✅ Frontend files copied${NC}"
 # Use full stack docker-compose
 echo ""
 echo -e "${YELLOW}🔨 Building Docker images...${NC}"
-docker-compose -f docker-compose.full.yml build --no-cache
+$COMPOSE_CMD -f docker-compose.full.yml build --no-cache
 
 echo ""
 echo -e "${YELLOW}🚀 Starting containers...${NC}"
-docker-compose -f docker-compose.full.yml up -d
+$COMPOSE_CMD -f docker-compose.full.yml up -d
 
 echo ""
 echo -e "${YELLOW}⏳ Waiting for services to start...${NC}"
@@ -174,7 +241,7 @@ for i in {1..10}; do
     if [ $i -eq 10 ]; then
         echo -e "${RED}❌ Backend health check failed${NC}"
         echo -e "${YELLOW}📊 Checking logs...${NC}"
-        docker-compose -f docker-compose.full.yml logs --tail=20
+        $COMPOSE_CMD -f docker-compose.full.yml logs --tail=20
         exit 1
     fi
     sleep 2
@@ -212,22 +279,22 @@ echo "   API: http://$VPS_IP/api"
 echo "   Health: http://$VPS_IP/health"
 echo ""
 echo -e "${YELLOW}📊 Useful Commands:${NC}"
-echo "   View logs:     cd $DEPLOY_DIR/backend/vps-server && docker-compose -f docker-compose.full.yml logs -f"
-echo "   Restart:      cd $DEPLOY_DIR/backend/vps-server && docker-compose -f docker-compose.full.yml restart"
-echo "   Stop:         cd $DEPLOY_DIR/backend/vps-server && docker-compose -f docker-compose.full.yml down"
-echo "   Status:       cd $DEPLOY_DIR/backend/vps-server && docker-compose -f docker-compose.full.yml ps"
+echo "   View logs:     cd $DEPLOY_DIR/backend/vps-server && $COMPOSE_CMD -f docker-compose.full.yml logs -f"
+echo "   Restart:      cd $DEPLOY_DIR/backend/vps-server && $COMPOSE_CMD -f docker-compose.full.yml restart"
+echo "   Stop:         cd $DEPLOY_DIR/backend/vps-server && $COMPOSE_CMD -f docker-compose.full.yml down"
+echo "   Status:       cd $DEPLOY_DIR/backend/vps-server && $COMPOSE_CMD -f docker-compose.full.yml ps"
 echo ""
 echo -e "${YELLOW}🔄 To Update Frontend:${NC}"
 echo "   1. cd $DEPLOY_DIR"
 echo "   2. git pull"
 echo "   3. npm run build"
 echo "   4. cp -r dist/* backend/vps-server/nginx/html/frontend/"
-echo "   5. docker-compose -f backend/vps-server/docker-compose.full.yml restart nginx"
+echo "   5. $COMPOSE_CMD -f backend/vps-server/docker-compose.full.yml restart nginx"
 echo ""
 echo -e "${YELLOW}📝 Next Steps:${NC}"
 echo "   1. Visit http://$VPS_IP in your browser"
 echo "   2. Test the API: curl http://$VPS_IP/health"
-echo "   3. Check logs if needed: docker-compose -f docker-compose.full.yml logs -f"
+echo "   3. Check logs if needed: $COMPOSE_CMD -f docker-compose.full.yml logs -f"
 echo "   4. Configure SSL (optional): See VPS_FULL_STACK.md"
 echo "   5. See POST_DEPLOY.md for detailed next steps"
 echo ""
