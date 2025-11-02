@@ -54,9 +54,9 @@ server {
         }
     }
 
-    # API proxy - must preserve /api prefix
+    # API proxy - using Docker service name (works on same network)
     location /api {
-        proxy_pass http://194.163.134.129:3333;
+        proxy_pass http://voicenote-api;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -72,9 +72,9 @@ server {
         proxy_read_timeout 600s;
     }
     
-    # Health check endpoint (no /api prefix)
+    # Health check endpoint
     location /health {
-        proxy_pass http://194.163.134.129:3333/health;
+        proxy_pass http://voicenote-api/health;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         access_log off;
