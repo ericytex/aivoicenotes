@@ -140,7 +140,7 @@ class AuthService {
         throw new Error('Invalid email or password');
       }
 
-      // If server is available but user doesn't exist there, try to create them
+      // If server is available but user doesn't exist there, try to sync them
       if (apiService.isConfigured()) {
         try {
           const isHealthy = await apiService.healthCheck();
@@ -168,10 +168,35 @@ class AuthService {
                   return userData;
                 }
               }
+            } else if (signupResponse.status === 400) {
+              // User might already exist on server - try signin instead
+              const signinResponse = await fetch('/api/auth/signin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: data.email, password: data.password }),
+              });
+              
+              if (signinResponse.ok) {
+                const signinResult = await signinResponse.json();
+                if (signinResult.success && signinResult.data) {
+                  // Server user exists - sync IDs
+                  const serverUserId = signinResult.data.id;
+                  if (serverUserId !== user.id) {
+                    await db.deleteUser(user.id);
+                    const salt = await bcrypt.genSalt(10);
+                    const passwordHash = await bcrypt.hash(data.password, salt);
+                    await db.createUserWithId(serverUserId, data.email, passwordHash, signinResult.data.is_admin || false);
+                    console.log('✅ User synced with server');
+                    const userData = { id: serverUserId, email: user.email, is_admin: signinResult.data.is_admin || false };
+                    this.setSession(serverUserId, userData);
+                    return userData;
+                  }
+                }
+              }
             }
           }
         } catch (error) {
-          console.warn('Could not create user on server, using local only:', error);
+          console.warn('Could not sync user with server, using local only:', error);
           // Continue with local auth anyway
         }
       }
