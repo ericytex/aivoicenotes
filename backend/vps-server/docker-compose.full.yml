@@ -46,7 +46,7 @@ services:
       - ./uploads:/usr/share/nginx/html/uploads:ro
       # Nginx config
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/conf.d/frontend.conf:/etc/nginx/conf.d/default.conf:ro
       # SSL certificates (if using SSL)
       # - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
