@@ -36,65 +36,98 @@ const Recorder = () => {
 
   const isPausedRef = useRef(false);
   const autoTranscribeRef = useRef(autoTranscribe);
+  const transcriptionQueueRef = useRef<Blob[]>([]);
+  const isProcessingQueueRef = useRef(false);
 
   // Update refs when values change
   useEffect(() => {
     autoTranscribeRef.current = autoTranscribe;
   }, [autoTranscribe]);
 
-  // Handle live transcription chunks during recording with word-by-word display
-  const handleLiveTranscriptionChunk = useCallback(async (chunk: Blob) => {
+  // Process transcription queue to avoid overlapping requests
+  const processTranscriptionQueue = useCallback(async () => {
+    if (isProcessingQueueRef.current || transcriptionQueueRef.current.length === 0) {
+      return;
+    }
+
+    isProcessingQueueRef.current = true;
+    setIsLiveTranscribing(true);
+
+    while (transcriptionQueueRef.current.length > 0 && !isPausedRef.current) {
+      const chunk = transcriptionQueueRef.current.shift();
+      if (!chunk) break;
+
+      try {
+        const transcribedText = await transcriptionService.transcribeChunk(chunk, 'groq');
+        if (transcribedText && transcribedText.trim()) {
+          // Split the new text into words for word-by-word display
+          const newWords = transcribedText.trim().split(/\s+/).filter(word => word.length > 0);
+          
+          // Get current displayed words
+          const currentWords = liveTranscriptionRef.current 
+            ? liveTranscriptionRef.current.split(/\s+/).filter(word => word.length > 0)
+            : [];
+          
+          // Find where to start appending (to avoid duplicating words)
+          const lastFewWords = currentWords.slice(-5).join(' ').toLowerCase();
+          let startIndex = 0;
+          
+          // Check if some words might overlap (common prefix detection)
+          for (let i = 0; i < Math.min(newWords.length, 5); i++) {
+            const prefix = newWords.slice(0, i + 1).join(' ').toLowerCase();
+            if (lastFewWords.includes(prefix)) {
+              startIndex = i + 1;
+            }
+          }
+          
+          // Display words in batches for real-time feel
+          // Group words into batches of 3-5 for faster updates while maintaining smooth appearance
+          const wordsToAdd = newWords.slice(startIndex);
+          const batchSize = 3;
+          
+          for (let i = 0; i < wordsToAdd.length; i += batchSize) {
+            const batch = wordsToAdd.slice(i, i + batchSize);
+            const previousText = liveTranscriptionRef.current || '';
+            const newText = previousText 
+              ? `${previousText} ${batch.join(' ')}`
+              : batch.join(' ');
+            
+            liveTranscriptionRef.current = newText;
+            setLiveTranscription(newText);
+            
+            // Reduced delay for faster updates (10ms per batch instead of 30ms per word)
+            if (i + batchSize < wordsToAdd.length) {
+              await new Promise(resolve => setTimeout(resolve, 10));
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error transcribing chunk:', error);
+        // Don't show error toasts during live transcription to avoid spam
+      }
+    }
+
+    isProcessingQueueRef.current = false;
+    setIsLiveTranscribing(false);
+  }, []);
+
+  // Handle live transcription chunks during recording - add to queue
+  const handleLiveTranscriptionChunk = useCallback((chunk: Blob) => {
     if (!autoTranscribeRef.current || isPausedRef.current) return;
     
-    setIsLiveTranscribing(true);
-    try {
-      const transcribedText = await transcriptionService.transcribeChunk(chunk, 'groq');
-      if (transcribedText && transcribedText.trim()) {
-        // Split the new text into words for word-by-word display
-        const newWords = transcribedText.trim().split(/\s+/).filter(word => word.length > 0);
-        
-        // Get current displayed words
-        const currentWords = liveTranscriptionRef.current 
-          ? liveTranscriptionRef.current.split(/\s+/).filter(word => word.length > 0)
-          : [];
-        
-        // Find where to start appending (to avoid duplicating words)
-        const lastFewWords = currentWords.slice(-5).join(' ').toLowerCase();
-        let startIndex = 0;
-        
-        // Check if some words might overlap (common prefix detection)
-        for (let i = 0; i < Math.min(newWords.length, 5); i++) {
-          const prefix = newWords.slice(0, i + 1).join(' ').toLowerCase();
-          if (lastFewWords.includes(prefix)) {
-            startIndex = i + 1;
-          }
-        }
-        
-        // Display words one by one with animation
-        const wordsToAdd = newWords.slice(startIndex);
-        for (let i = 0; i < wordsToAdd.length; i++) {
-          const word = wordsToAdd[i];
-          const previousText = liveTranscriptionRef.current || '';
-          const newText = previousText 
-            ? `${previousText} ${word}`
-            : word;
-          
-          liveTranscriptionRef.current = newText;
-          setLiveTranscription(newText);
-          
-          // Small delay between words for typing effect
-          if (i < wordsToAdd.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 30));
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error transcribing chunk:', error);
-      // Don't show error toasts during live transcription to avoid spam
-    } finally {
-      setIsLiveTranscribing(false);
+    // Add to queue and process if not already processing
+    transcriptionQueueRef.current.push(chunk);
+    
+    // Limit queue size to prevent memory issues (keep last 3 chunks)
+    if (transcriptionQueueRef.current.length > 3) {
+      transcriptionQueueRef.current.shift();
     }
-  }, []);
+    
+    // Trigger processing if not already processing
+    if (!isProcessingQueueRef.current) {
+      processTranscriptionQueue();
+    }
+  }, [processTranscriptionQueue]);
 
   const {
     isRecording,

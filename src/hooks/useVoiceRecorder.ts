@@ -53,8 +53,9 @@ export const useVoiceRecorder = (onChunkAvailable?: (chunk: Blob) => void) => {
           // Check paused state via ref to avoid closure issues
           if (onChunkAvailable && mediaRecorder.state === 'recording') {
             // For live transcription, we need valid audio files
-            // Wait for at least 3 chunks to accumulate enough audio data
-            if (audioChunksRef.current.length >= 3) {
+            // Process after 2 chunks for faster initial transcription (≈2-3 seconds vs 9 seconds)
+            // This provides better real-time feel while still ensuring valid audio files
+            if (audioChunksRef.current.length >= 2) {
               // Create a valid audio file from chunks (including all chunks from start for webm)
               // This ensures we have initialization segments needed for valid webm files
               createValidAudioFromChunks(
@@ -62,7 +63,9 @@ export const useVoiceRecorder = (onChunkAvailable?: (chunk: Blob) => void) => {
                 mimeTypeRef.current,
                 lastTranscribedChunkRef.current
               ).then(async (validAudioBlob) => {
-                if (validAudioBlob.size > 20000) { // Only send if meaningful size (20KB+)
+                // Lower threshold to 10KB for faster response (was 20KB)
+                // This allows transcription to start sooner
+                if (validAudioBlob.size > 10000) {
                   console.log(`Preparing valid audio for transcription: ${validAudioBlob.size} bytes, type: ${validAudioBlob.type}`);
                   
                   // Update last transcribed index to avoid re-sending same audio
@@ -110,9 +113,10 @@ export const useVoiceRecorder = (onChunkAvailable?: (chunk: Blob) => void) => {
         });
       };
 
-      // Start recording - request data every 3 seconds for better chunking
-      // This balances real-time transcription with API efficiency
-      mediaRecorder.start(3000);
+      // Start recording - request data every 1.5 seconds for real-time feel
+      // This provides faster transcription updates (≈3 seconds for first transcription vs 9 seconds)
+      // while maintaining API efficiency and valid audio file creation
+      mediaRecorder.start(1500);
       lastTranscribedChunkRef.current = 0;
       setIsRecording(true);
       setIsPaused(false);
