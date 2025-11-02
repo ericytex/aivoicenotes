@@ -140,6 +140,42 @@ class AuthService {
         throw new Error('Invalid email or password');
       }
 
+      // If server is available but user doesn't exist there, try to create them
+      if (apiService.isConfigured()) {
+        try {
+          const isHealthy = await apiService.healthCheck();
+          if (isHealthy) {
+            // Try to create user on server with same credentials
+            const signupResponse = await fetch('/api/auth/signup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: data.email, password: data.password }),
+            });
+            
+            if (signupResponse.ok) {
+              const signupResult = await signupResponse.json();
+              if (signupResult.success && signupResult.data) {
+                // Update local user to use server's ID
+                const serverUserId = signupResult.data.id;
+                if (serverUserId !== user.id) {
+                  await db.deleteUser(user.id);
+                  const salt = await bcrypt.genSalt(10);
+                  const passwordHash = await bcrypt.hash(data.password, salt);
+                  await db.createUserWithId(serverUserId, data.email, passwordHash, false);
+                  console.log('✅ User created on server and synced');
+                  const userData = { id: serverUserId, email: user.email, is_admin: false };
+                  this.setSession(serverUserId, userData);
+                  return userData;
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Could not create user on server, using local only:', error);
+          // Continue with local auth anyway
+        }
+      }
+
       // Create session
       const userData = { id: user.id, email: user.email, is_admin: user.is_admin };
       this.setSession(user.id, userData);

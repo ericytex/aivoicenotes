@@ -127,7 +127,18 @@ class ServerSyncService {
       const localNotes = await db.getNotesByUserId(user.id);
 
       // Sync with server
-      const syncResult = await apiService.syncNotes(localNotes);
+      let syncResult;
+      try {
+        syncResult = await apiService.syncNotes(localNotes);
+      } catch (error: any) {
+        // Handle 401 - user doesn't exist on server
+        if (error.message?.includes('Unauthorized') || error.message?.includes('401')) {
+          console.warn('⚠️  User not found on server. You may need to sign out and sign back in to sync.');
+          // Don't throw - just skip sync for this attempt
+          return;
+        }
+        throw error;
+      }
 
       // Apply server changes to local database using a sync-safe method
       // We'll use a flag to prevent sync loops
