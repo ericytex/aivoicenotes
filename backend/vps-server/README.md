@@ -66,11 +66,21 @@ sudo certbot --nginx -d api.yourdomain.com
 
 ## Environment Variables
 
+Create `.env` file from `.env.example`:
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+**Backend Variables:**
 - `PORT` - Server port (default: 3333)
 - `CORS_ORIGIN` - Allowed CORS origin (your frontend URL)
 - `DB_PATH` - Path to SQLite database file
 - `UPLOAD_DIR` - Directory for audio file uploads
 - `JWT_SECRET` - Secret key for JWT tokens
+
+**Note:** The backend does NOT need Gemini/Groq API keys. Those are configured in the **frontend** `.env` file. See [ENV_SETUP.md](../../ENV_SETUP.md) for details.
 
 ## Database
 

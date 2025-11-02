@@ -15,8 +15,8 @@ chmod +x start-docker.sh
 ./start-docker.sh
 
 # Or manually:
-cp .env.example .env
-nano .env  # Set CORS_ORIGIN
+cp env.example.txt .env
+nano .env  # Set CORS_ORIGIN (no API keys needed in backend)
 docker-compose up -d
 ```
 
@@ -73,8 +73,8 @@ chmod +x setup.sh
 
 # Or manually:
 npm install
-cp .env.example .env
-nano .env  # Edit configuration
+cp env.example.txt .env
+nano .env  # Edit configuration (no API keys needed here)
 ```
 
 ### 2. Configure `.env`
