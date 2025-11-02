@@ -123,22 +123,29 @@ class ServerSyncService {
         return;
       }
 
-      // Get all local notes
-      const localNotes = await db.getNotesByUserId(user.id);
-
-      // Sync with server
-      let syncResult;
+      // Server-first sync: Get notes from server first, then push local pending changes
+      // First, get all notes from server (source of truth)
+      let serverNotes: Note[] = [];
       try {
-        syncResult = await apiService.syncNotes(localNotes);
+        const allServerNotes = await apiService.getNotes();
+        serverNotes = allServerNotes || [];
       } catch (error: any) {
-        // Handle 401 - user doesn't exist on server
+        // Handle 401 - user doesn't exist on server (shouldn't happen with server-first auth)
         if (error.message?.includes('Unauthorized') || error.message?.includes('401')) {
-          console.warn('⚠️  User not found on server. You may need to sign out and sign back in to sync.');
-          // Don't throw - just skip sync for this attempt
+          console.error('❌ Authentication failed. Please sign out and sign back in.');
           return;
         }
         throw error;
       }
+
+      // Get local notes for comparison
+      const localNotes = await db.getNotesByUserId(user.id);
+      
+      // Create sync result structure (server is source of truth)
+      const syncResult = {
+        notes: serverNotes,
+        conflicts: [] as any[]
+      };
 
       // Apply server changes to local database using a sync-safe method
       // We'll use a flag to prevent sync loops
@@ -239,6 +246,7 @@ class ServerSyncService {
       }
 
       // Process pending changes (push local changes to server)
+      // Server is source of truth, so we push local changes after pulling from server
       const changesToProcess = [...this.pendingChanges];
       this.pendingChanges = [];
 
@@ -252,8 +260,8 @@ class ServerSyncService {
             await apiService.deleteNote(change.noteId);
           }
         } catch (error) {
-          console.error(`Error syncing change ${change.type} for ${change.noteId}:`, error);
-          // Re-add to pending if it failed
+          console.error(`Error pushing local change ${change.type} for ${change.noteId}:`, error);
+          // Re-add to pending if it failed - will retry on next sync
           this.pendingChanges.push(change);
         }
       }

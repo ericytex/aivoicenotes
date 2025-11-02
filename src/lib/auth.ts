@@ -22,197 +22,148 @@ class AuthService {
   private readonly SESSION_USER_KEY = 'voicenote_user';
 
   async signUp(data: SignUpData): Promise<User> {
-    // Check if user already exists locally
-    const existingUser = await db.getUserByEmail(data.email);
-    if (existingUser) {
-      throw new Error('User with this email already exists');
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(data.password, salt);
-
-    // Create user locally first
-    let userId = await db.createUser(data.email, passwordHash);
-
-    // Try to create user on server if API is configured
+    // Server-first: Create user on server first
     const apiService = (await import('./api')).apiService;
-    if (apiService.isConfigured()) {
-      try {
-        const response = await fetch('/api/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: data.email, password: data.password }),
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data) {
-            // Use server's user ID to keep them in sync
-            const serverUserId = result.data.id;
-            if (serverUserId !== userId) {
-              // Update local user to use server ID
-              // Delete old user and create with server ID
-              await db.deleteUser(userId);
-              userId = await db.createUserWithId(serverUserId, data.email, passwordHash, false);
-            }
-            console.log('User created on server with ID:', serverUserId);
-          }
-        } else {
-          console.warn('Failed to create user on server, but user created locally');
-        }
-      } catch (error) {
-        console.warn('Could not create user on server:', error);
-        // Continue anyway - user is created locally
-      }
+    
+    if (!apiService.isConfigured()) {
+      throw new Error('Server is not configured. Please configure the API URL.');
     }
 
-    // Create session
-    const user = { id: userId, email: data.email, is_admin: false };
-    this.setSession(userId, user);
+    // Check server health
+    const isHealthy = await apiService.healthCheck();
+    if (!isHealthy) {
+      throw new Error('Server is not available. Please try again later.');
+    }
 
-    return user;
-  }
-
-  async signIn(data: SignInData): Promise<User> {
+    // Create user on server first
+    let serverUser: User | null = null;
     try {
-      // Ensure database is initialized
-      await db.ensureInitialized();
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email, password: data.password }),
+      });
       
-      // Try server first if API is configured
-      const apiService = (await import('./api')).apiService;
-      if (apiService.isConfigured()) {
-        try {
-          const response = await fetch('/api/auth/signin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: data.email, password: data.password }),
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            if (result.success && result.data) {
-              const serverUser = result.data;
-              
-              // Check if user exists locally, if not create them
-              let localUser = await db.getUserByEmail(data.email);
-              if (!localUser) {
-                // User exists on server but not locally - create local user
-                const salt = await bcrypt.genSalt(10);
-                const passwordHash = await bcrypt.hash(data.password, salt);
-                // Use server's user ID
-                await db.createUserWithId(serverUser.id, data.email, passwordHash, serverUser.is_admin);
-                localUser = await db.getUserByEmail(data.email);
-              }
-
-              // Verify password matches locally for offline access
-              const isValid = await bcrypt.compare(data.password, localUser!.password_hash);
-              if (!isValid) {
-                // Update local password hash to match server
-                const salt = await bcrypt.genSalt(10);
-                const passwordHash = await bcrypt.hash(data.password, salt);
-                // Update would require a method in database.ts - for now, just use server auth
-              }
-
-              const userData = { id: serverUser.id, email: serverUser.email, is_admin: serverUser.is_admin };
-              this.setSession(serverUser.id, userData);
-              console.log('Sign in successful (server) for user:', serverUser.email);
-              return userData;
-            }
-          }
-        } catch (error) {
-          console.warn('Server signin failed, trying local:', error);
-          // Fall through to local auth
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          serverUser = result.data;
         }
+      } else {
+        const error = await response.json().catch(() => ({ error: 'Failed to create user' }));
+        throw new Error(error.error || 'Failed to create user on server');
       }
-      
-      // Fallback to local authentication
-      const user = await db.getUserByEmail(data.email);
-      if (!user) {
-        console.error('Sign in failed: User not found for email:', data.email);
-        throw new Error('Invalid email or password');
-      }
-
-      // Verify password
-      const isValid = await bcrypt.compare(data.password, user.password_hash);
-      if (!isValid) {
-        console.error('Sign in failed: Password mismatch for email:', data.email);
-        throw new Error('Invalid email or password');
-      }
-
-      // If server is available but user doesn't exist there, try to sync them
-      if (apiService.isConfigured()) {
-        try {
-          const isHealthy = await apiService.healthCheck();
-          if (isHealthy) {
-            // Try to create user on server with same credentials
-            const signupResponse = await fetch('/api/auth/signup', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: data.email, password: data.password }),
-            });
-            
-            if (signupResponse.ok) {
-              const signupResult = await signupResponse.json();
-              if (signupResult.success && signupResult.data) {
-                // Update local user to use server's ID
-                const serverUserId = signupResult.data.id;
-                if (serverUserId !== user.id) {
-                  await db.deleteUser(user.id);
-                  const salt = await bcrypt.genSalt(10);
-                  const passwordHash = await bcrypt.hash(data.password, salt);
-                  await db.createUserWithId(serverUserId, data.email, passwordHash, false);
-                  console.log('✅ User created on server and synced');
-                  const userData = { id: serverUserId, email: user.email, is_admin: false };
-                  this.setSession(serverUserId, userData);
-                  return userData;
-                }
-              }
-            } else if (signupResponse.status === 400) {
-              // User might already exist on server - try signin instead
-              const signinResponse = await fetch('/api/auth/signin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: data.email, password: data.password }),
-              });
-              
-              if (signinResponse.ok) {
-                const signinResult = await signinResponse.json();
-                if (signinResult.success && signinResult.data) {
-                  // Server user exists - sync IDs
-                  const serverUserId = signinResult.data.id;
-                  if (serverUserId !== user.id) {
-                    await db.deleteUser(user.id);
-                    const salt = await bcrypt.genSalt(10);
-                    const passwordHash = await bcrypt.hash(data.password, salt);
-                    await db.createUserWithId(serverUserId, data.email, passwordHash, signinResult.data.is_admin || false);
-                    console.log('✅ User synced with server');
-                    const userData = { id: serverUserId, email: user.email, is_admin: signinResult.data.is_admin || false };
-                    this.setSession(serverUserId, userData);
-                    return userData;
-                  }
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.warn('Could not sync user with server, using local only:', error);
-          // Continue with local auth anyway
-        }
-      }
-
-      // Create session
-      const userData = { id: user.id, email: user.email, is_admin: user.is_admin };
-      this.setSession(user.id, userData);
-
-      console.log('Sign in successful (local) for user:', user.email);
-      return userData;
     } catch (error) {
-      console.error('Sign in error:', error);
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('An error occurred during sign in');
+      throw new Error('Failed to connect to server');
+    }
+
+    if (!serverUser) {
+      throw new Error('Failed to create user on server');
+    }
+
+    // Now sync to local database (for offline access)
+    try {
+      // Check if user already exists locally
+      const existingUser = await db.getUserByEmail(data.email);
+      if (existingUser && existingUser.id !== serverUser.id) {
+        // Delete old local user with different ID
+        await db.deleteUser(existingUser.id);
+      }
+
+      // Create or update local user with server's ID
+      if (!existingUser || existingUser.id !== serverUser.id) {
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(data.password, salt);
+        await db.createUserWithId(serverUser.id, data.email, passwordHash, serverUser.is_admin || false);
+      }
+
+      console.log('✅ User created on server and synced to local');
+    } catch (error) {
+      console.warn('⚠️  User created on server but local sync failed:', error);
+      // Continue anyway - server has the user
+    }
+
+    // Create session with server's user data
+    this.setSession(serverUser.id, serverUser);
+    return serverUser;
+  }
+
+  async signIn(data: SignInData): Promise<User> {
+    // Server-first: Always authenticate with server first
+    const apiService = (await import('./api')).apiService;
+    
+    if (!apiService.isConfigured()) {
+      throw new Error('Server is not configured. Please configure the API URL.');
+    }
+
+    // Check server health
+    const isHealthy = await apiService.healthCheck();
+    if (!isHealthy) {
+      throw new Error('Server is not available. Please check your connection and try again.');
+    }
+
+    // Authenticate with server first
+    let serverUser: User | null = null;
+    try {
+      const response = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email, password: data.password }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          serverUser = result.data;
+        }
+      } else {
+        const error = await response.json().catch(() => ({ error: 'Invalid email or password' }));
+        throw new Error(error.error || 'Invalid email or password');
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to connect to server');
+    }
+
+    if (!serverUser) {
+      throw new Error('Invalid email or password');
+    }
+
+    // Sync user to local database (for offline caching)
+    try {
+      await db.ensureInitialized();
+      
+      // Check if user exists locally
+      let localUser = await db.getUserByEmail(data.email);
+      
+      if (!localUser || localUser.id !== serverUser.id) {
+        // Delete old local user if ID doesn't match
+        if (localUser && localUser.id !== serverUser.id) {
+          await db.deleteUser(localUser.id);
+        }
+
+        // Create local user with server's ID and password (for offline access)
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(data.password, salt);
+        await db.createUserWithId(serverUser.id, data.email, passwordHash, serverUser.is_admin || false);
+        
+        console.log('✅ User synced from server to local cache');
+      }
+
+      // Create session with server's user data
+      this.setSession(serverUser.id, serverUser);
+      console.log('✅ Sign in successful (server-first):', serverUser.email);
+      return serverUser;
+    } catch (error) {
+      console.warn('⚠️  Server authentication succeeded but local sync failed:', error);
+      // Continue anyway - server has authenticated the user
+      this.setSession(serverUser.id, serverUser);
+      return serverUser;
     }
   }
 
