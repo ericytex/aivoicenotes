@@ -1,8 +1,17 @@
 # VoiceNote API - VPS Server
 
-Simple Express server for cross-device sync. Deploy on your VPS.
+Simple Express server for cross-device sync. Deploy on your VPS with Docker or directly.
 
-## Quick Start
+## 🐳 Docker Deployment (Recommended)
+
+**Quick Start:**
+```bash
+docker-compose up -d
+```
+
+See [DOCKER.md](./DOCKER.md) for complete Docker deployment guide.
+
+## 📦 Direct Deployment
 
 1. **Install dependencies:**
    ```bash

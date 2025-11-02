@@ -1,6 +1,33 @@
 # Quick Start: VPS Deployment
 
-## TL;DR - Get it running in 5 minutes
+## 🐳 Docker Deployment (Recommended)
+
+**TL;DR - Get it running in 3 minutes:**
+
+```bash
+# On your VPS
+cd ~
+git clone https://github.com/ericytex/aivoicenotes.git
+cd aivoicenotes/backend/vps-server
+
+# Quick start with Docker
+chmod +x start-docker.sh
+./start-docker.sh
+
+# Or manually:
+cp .env.example .env
+nano .env  # Set CORS_ORIGIN
+docker-compose up -d
+```
+
+Then in your frontend `.env`:
+```env
+VITE_API_URL=http://your-vps-ip:3333
+```
+
+**Done!** Your database is now syncing across devices.
+
+## 📦 Direct Deployment (Without Docker)
 
 ```bash
 # On your VPS
@@ -20,13 +47,6 @@ pm2 start ecosystem.config.js
 pm2 save
 pm2 startup
 ```
-
-Then in your frontend `.env`:
-```env
-VITE_API_URL=http://your-vps-ip:3333
-```
-
-**Done!** Your database is now syncing across devices.
 
 ---
 
