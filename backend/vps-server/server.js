@@ -67,8 +67,14 @@ try {
 } catch (error) {
   console.error('❌ Database connection failed:', error);
   console.error('   DB_PATH:', DB_PATH);
+  console.error('   Data directory:', dirname(DB_PATH));
   console.error('   Data directory exists:', fs.existsSync(dirname(DB_PATH)));
-  console.error('   Data directory writable:', fs.accessSync(dirname(DB_PATH), fs.constants.W_OK) !== undefined ? 'yes' : 'no');
+  try {
+    fs.accessSync(dirname(DB_PATH), fs.constants.W_OK);
+    console.error('   Data directory writable: yes');
+  } catch (permError) {
+    console.error('   Data directory writable: no -', permError.message);
+  }
   process.exit(1);
 }
 
