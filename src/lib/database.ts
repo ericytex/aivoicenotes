@@ -1,5 +1,6 @@
 import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
 import { syncService } from './sync';
+import { serverSyncService } from './sync-server';
 
 // Types matching the Supabase schema
 export interface Note {
@@ -218,7 +219,9 @@ class DatabaseService {
 
     await this.saveToIndexedDB();
 
-    // Broadcast sync event
+    const createdNote = await this.getNoteById(id);
+
+    // Broadcast to other tabs
     syncService.broadcastEvent({
       type: 'note_created',
       noteId: id,
@@ -226,7 +229,24 @@ class DatabaseService {
       timestamp: now,
     });
 
-    return this.getNoteById(id);
+    // Queue for server sync
+    serverSyncService.addPendingChange({
+      type: 'create',
+      noteId: id,
+      data: {
+        user_id: note.user_id,
+        title: createdNote.title,
+        content: createdNote.content,
+        audio_url: createdNote.audio_url,
+        duration: createdNote.duration,
+        language: createdNote.language,
+        tags: createdNote.tags,
+        note_type: createdNote.note_type,
+      },
+      timestamp: now,
+    });
+
+    return createdNote;
   }
 
   async getNoteById(id: string): Promise<Note> {
@@ -311,14 +331,26 @@ class DatabaseService {
 
     await this.saveToIndexedDB();
 
-    // Broadcast sync event
     const updatedNote = await this.getNoteById(id);
+    const now = new Date().toISOString();
+
+    // Broadcast to other tabs
     syncService.broadcastEvent({
       type: 'note_updated',
       noteId: id,
       userId: updatedNote.user_id,
-      timestamp: new Date().toISOString(),
+      timestamp: now,
     });
+
+    // Queue for server sync (skip if this is a server sync operation)
+    if (!(this as any)._isSyncing) {
+      serverSyncService.addPendingChange({
+        type: 'update',
+        noteId: id,
+        data: updates,
+        timestamp: now,
+      });
+    }
 
     return updatedNote;
   }
@@ -339,14 +371,26 @@ class DatabaseService {
     this.db.run(`DELETE FROM notes WHERE id = ?`, [id]);
     await this.saveToIndexedDB();
 
-    // Broadcast sync event
+    const now = new Date().toISOString();
+
+    // Broadcast to other tabs
     if (userId) {
       syncService.broadcastEvent({
         type: 'note_deleted',
         noteId: id,
         userId: userId,
-        timestamp: new Date().toISOString(),
+        timestamp: now,
       });
+
+      // Queue for server sync (skip if this is a server sync operation)
+      if (!(this as any)._isSyncing) {
+        serverSyncService.addPendingChange({
+          type: 'delete',
+          noteId: id,
+          data: {},
+          timestamp: now,
+        });
+      }
     }
   }
 
