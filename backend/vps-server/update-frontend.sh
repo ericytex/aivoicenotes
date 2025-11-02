@@ -11,14 +11,32 @@ echo ""
 cd "$(dirname "$0")"
 
 # Find the project root (should be ~/voicenote-full)
+# We're in backend/vps-server, so go up 2 levels
 PROJECT_ROOT="$PWD"
-while [ ! -f "$PROJECT_ROOT/package.json" ] && [ "$PROJECT_ROOT" != "/" ]; do
+while [ ! -f "$PROJECT_ROOT/vite.config.ts" ] && [ "$PROJECT_ROOT" != "/" ]; do
     PROJECT_ROOT="$(dirname "$PROJECT_ROOT")"
 done
 
-if [ ! -f "$PROJECT_ROOT/package.json" ]; then
-    echo "❌ Could not find project root with package.json"
-    echo "   Make sure you're in ~/voicenote-full or its subdirectories"
+if [ ! -f "$PROJECT_ROOT/vite.config.ts" ]; then
+    # Alternative: look for package.json with vite or react-scripts
+    PROJECT_ROOT="$PWD"
+    while [ "$PROJECT_ROOT" != "/" ]; do
+        if [ -f "$PROJECT_ROOT/package.json" ]; then
+            # Check if this is the frontend package.json (has vite or react-scripts)
+            if grep -q "\"vite\"" "$PROJECT_ROOT/package.json" || grep -q "react-scripts" "$PROJECT_ROOT/package.json"; then
+                break
+            fi
+        fi
+        PROJECT_ROOT="$(dirname "$PROJECT_ROOT")"
+    done
+fi
+
+if [ ! -f "$PROJECT_ROOT/package.json" ] || [ "$PROJECT_ROOT" = "/" ]; then
+    echo "❌ Could not find frontend project root"
+    echo "   Expected to find ~/voicenote-full/package.json"
+    echo "   Current directory: $PWD"
+    echo ""
+    echo "   Please run from ~/voicenote-full/backend/vps-server"
     exit 1
 fi
 
