@@ -10,20 +10,18 @@ echo ""
 
 cd "$(dirname "$0")"
 
-# Check if we're in a git repo
-if [ ! -d ".git" ]; then
-    echo "❌ Not in a git repository"
-    exit 1
+# Backup local changes (if in git repo)
+echo "1. Checking for local changes..."
+if [ -d ".git" ]; then
+    echo "   Stashing local changes (if any)..."
+    git stash push -m "Local Nginx config changes before fix" 2>/dev/null || echo "   No local changes to stash"
+    
+    echo ""
+    echo "2. Pulling latest changes..."
+    git pull || echo "   Git pull failed or not needed"
+else
+    echo "   Not a git repository, skipping git operations"
 fi
-
-# Backup local changes
-echo "1. Stashing local changes..."
-git stash push -m "Local Nginx config changes before fix" || true
-
-# Pull latest changes
-echo ""
-echo "2. Pulling latest changes..."
-git pull
 
 # Now run the fix
 echo ""
