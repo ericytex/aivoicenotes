@@ -153,6 +153,105 @@ const formatNote = (note) => {
   };
 };
 
+// Auth endpoints
+app.post('/api/auth/signup', express.json(), (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'User with this email already exists'
+      });
+    }
+
+    // Hash password
+    const bcrypt = require('bcryptjs');
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(password, salt);
+
+    // Create user
+    const id = require('crypto').randomUUID();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+      INSERT INTO users (id, email, password_hash, is_admin, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(id, email, passwordHash, 0, now);
+
+    res.json({
+      success: true,
+      data: {
+        id,
+        email,
+        is_admin: false
+      }
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create user'
+    });
+  }
+});
+
+app.post('/api/auth/signin', express.json(), (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required'
+      });
+    }
+
+    // Find user
+    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid email or password'
+      });
+    }
+
+    // Verify password
+    const bcrypt = require('bcryptjs');
+    const isValid = bcrypt.compareSync(password, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid email or password'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: user.id,
+        email: user.email,
+        is_admin: user.is_admin === 1
+      }
+    });
+  } catch (error) {
+    console.error('Signin error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to sign in'
+    });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   try {

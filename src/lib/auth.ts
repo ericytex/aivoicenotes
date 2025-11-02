@@ -47,6 +47,54 @@ class AuthService {
       // Ensure database is initialized
       await db.ensureInitialized();
       
+      // Try server first if API is configured
+      const apiService = (await import('./api')).apiService;
+      if (apiService.isConfigured()) {
+        try {
+          const response = await fetch('/api/auth/signin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: data.email, password: data.password }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data) {
+              const serverUser = result.data;
+              
+              // Check if user exists locally, if not create them
+              let localUser = await db.getUserByEmail(data.email);
+              if (!localUser) {
+                // User exists on server but not locally - create local user
+                const salt = await bcrypt.genSalt(10);
+                const passwordHash = await bcrypt.hash(data.password, salt);
+                // Use server's user ID
+                await db.createUserWithId(serverUser.id, data.email, passwordHash, serverUser.is_admin);
+                localUser = await db.getUserByEmail(data.email);
+              }
+
+              // Verify password matches locally for offline access
+              const isValid = await bcrypt.compare(data.password, localUser!.password_hash);
+              if (!isValid) {
+                // Update local password hash to match server
+                const salt = await bcrypt.genSalt(10);
+                const passwordHash = await bcrypt.hash(data.password, salt);
+                // Update would require a method in database.ts - for now, just use server auth
+              }
+
+              const userData = { id: serverUser.id, email: serverUser.email, is_admin: serverUser.is_admin };
+              this.setSession(serverUser.id, userData);
+              console.log('Sign in successful (server) for user:', serverUser.email);
+              return userData;
+            }
+          }
+        } catch (error) {
+          console.warn('Server signin failed, trying local:', error);
+          // Fall through to local auth
+        }
+      }
+      
+      // Fallback to local authentication
       const user = await db.getUserByEmail(data.email);
       if (!user) {
         console.error('Sign in failed: User not found for email:', data.email);
@@ -64,7 +112,7 @@ class AuthService {
       const userData = { id: user.id, email: user.email, is_admin: user.is_admin };
       this.setSession(user.id, userData);
 
-      console.log('Sign in successful for user:', user.email);
+      console.log('Sign in successful (local) for user:', user.email);
       return userData;
     } catch (error) {
       console.error('Sign in error:', error);

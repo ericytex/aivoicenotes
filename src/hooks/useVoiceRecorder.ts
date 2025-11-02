@@ -17,6 +17,17 @@ export const useVoiceRecorder = (onChunkAvailable?: (chunk: Blob) => void) => {
 
   const startRecording = useCallback(async () => {
     try {
+      // Check if getUserMedia is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const error = new Error(
+          'Microphone access not available. ' +
+          (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && !window.location.hostname.startsWith('127.0.0.1')
+            ? 'Please use HTTPS or localhost to access the microphone.'
+            : 'Your browser may not support microphone access. Please try a modern browser like Chrome, Firefox, or Edge.')
+        );
+        throw error;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
       // Check for supported MIME types

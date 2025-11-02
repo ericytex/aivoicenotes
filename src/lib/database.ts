@@ -414,6 +414,10 @@ class DatabaseService {
 
   // User operations for authentication
   async createUser(email: string, passwordHash: string, isAdmin: boolean = false): Promise<string> {
+    return this.createUserWithId(generateUUID(), email, passwordHash, isAdmin);
+  }
+
+  async createUserWithId(id: string, email: string, passwordHash: string, isAdmin: boolean = false): Promise<string> {
     await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
 
@@ -423,7 +427,6 @@ class DatabaseService {
       throw new Error('User with this email already exists');
     }
 
-    const id = generateUUID();
     const now = new Date().toISOString();
 
     this.db.run(
