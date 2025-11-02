@@ -107,7 +107,7 @@ fi
 # Backup original config
 cp nginx/conf.d/frontend.conf nginx/conf.d/frontend.conf.backup
 
-# Create new config with HTTPS enabled
+# Create new config with HTTPS enabled (HTTP on port 80, HTTPS on port 443 inside container)
 cat > nginx/conf.d/frontend.conf <<EOF
 # VoiceNote Frontend + API Nginx Configuration
 # Serves React frontend and proxies API requests to backend
@@ -116,7 +116,7 @@ upstream voicenote-api {
     server voicenote-api:3333;
 }
 
-# HTTP server - redirect to HTTPS
+# HTTP server - redirect to HTTPS (mapped to port 8888 externally)
 server {
     listen 80;
     server_name ${SERVER_NAME};
@@ -204,32 +204,36 @@ EOF
 
 echo -e "${GREEN}✅ Nginx configuration updated${NC}"
 
-# Update docker-compose to use port 443
-if ! grep -q "443:443" docker-compose.full.yml; then
+# Update docker-compose to add HTTPS port (keep 8888 for HTTP)
+if ! grep -q "nginx/certs" docker-compose.full.yml; then
     echo ""
     echo -e "${YELLOW}Updating docker-compose.yml...${NC}"
     
     # Backup
     cp docker-compose.full.yml docker-compose.full.yml.backup
     
-    # Update ports
-    sed -i 's/- "${NGINX_PORT:-8888}:80"/- "443:443"\n      - "80:80"/' docker-compose.full.yml
-    
-    # Ensure certs volume is mounted
-    if ! grep -q "nginx/certs" docker-compose.full.yml; then
+    # Add certs volume mount if not present
+    # Find the line with nginx/conf.d and add certs mount after it
+    if ! grep -q "./nginx/certs" docker-compose.full.yml; then
         sed -i '/nginx\/conf.d\/frontend.conf/a\      # SSL certificates\n      - ./nginx/certs:/etc/nginx/certs:ro' docker-compose.full.yml
+    fi
+    
+    # Ensure HTTPS port is included (8443:443)
+    if ! grep -q "8443:443" docker-compose.full.yml; then
+        # Add 8443:443 port if only 8888:80 exists
+        sed -i 's/- "${NGINX_PORT:-8888}:80"/- "${NGINX_PORT:-8888}:80"\n      - "${NGINX_HTTPS_PORT:-8443}:443"/' docker-compose.full.yml
     fi
     
     echo -e "${GREEN}✅ Docker Compose updated${NC}"
 fi
 
-# Update firewall
+# Update firewall (use custom ports, not 80/443)
 echo ""
 echo -e "${YELLOW}Configuring firewall...${NC}"
 if command -v ufw &> /dev/null; then
-    sudo ufw allow 443/tcp 2>/dev/null || true
-    sudo ufw allow 80/tcp 2>/dev/null || true
-    echo -e "${GREEN}✅ Firewall updated${NC}"
+    sudo ufw allow 8443/tcp 2>/dev/null || true
+    sudo ufw allow 8888/tcp 2>/dev/null || true
+    echo -e "${GREEN}✅ Firewall updated (ports 8888 and 8443)${NC}"
 fi
 
 # Restart containers
@@ -246,18 +250,20 @@ echo ""
 
 if [ "$USE_LETSENCRYPT" = "true" ]; then
     echo -e "${YELLOW}📍 Access your app at:${NC}"
-    echo "   https://${DOMAIN}"
+    echo "   HTTP:  http://${DOMAIN}:8888 (redirects to HTTPS)"
+    echo "   HTTPS: https://${DOMAIN}:8443"
     echo ""
     echo -e "${YELLOW}📝 Set up auto-renewal:${NC}"
     echo "   sudo certbot renew --dry-run"
     echo "   # Add to crontab: 0 3 * * * certbot renew --quiet"
 else
     echo -e "${YELLOW}📍 Access your app at:${NC}"
-    echo "   https://${VPS_IP}"
+    echo "   HTTP:  http://${VPS_IP}:8888 (redirects to HTTPS)"
+    echo "   HTTPS: https://${VPS_IP}:8443"
     echo ""
     echo -e "${YELLOW}⚠️  Browser Security Warning:${NC}"
     echo "   Your browser will show a security warning because this is a self-signed certificate."
-    echo "   Click 'Advanced' → 'Proceed to ${VPS_IP} (unsafe)' to continue."
+    echo "   Click 'Advanced' → 'Proceed to ${VPS_IP}:8443 (unsafe)' to continue."
     echo ""
     echo -e "${YELLOW}💡 For production, use Let's Encrypt with a domain:${NC}"
     echo "   DOMAIN=yourdomain.com EMAIL=your@email.com USE_LETSENCRYPT=true ./enable-https.sh"
