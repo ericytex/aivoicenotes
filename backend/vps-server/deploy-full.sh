@@ -7,7 +7,7 @@ set -e
 
 VPS_IP="${VPS_IP:-194.163.134.129}"
 PORT=3333
-NGINX_PORT="${NGINX_PORT:-8080}"
+NGINX_PORT="${NGINX_PORT:-8888}"
 FRONTEND_URL="${FRONTEND_URL:-http://$VPS_IP:$NGINX_PORT}"
 
 echo "🚀 VoiceNote Full Stack - Automated Deployment"

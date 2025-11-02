@@ -37,7 +37,7 @@ services:
     container_name: voicenote-nginx
     restart: unless-stopped
     ports:
-      - "${NGINX_PORT:-8080}:80"
+      - "${NGINX_PORT:-8888}:80"
       - "${NGINX_HTTPS_PORT:-8443}:443"
     volumes:
       # Frontend static files
