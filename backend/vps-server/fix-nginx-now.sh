@@ -144,8 +144,11 @@ if docker compose -f docker-compose.full.yml ps | grep -q "voicenote-nginx.*Up";
     echo ""
     echo "📍 Access your app at: http://194.163.134.129:8888"
     echo ""
-    echo "⚠️  To enable recording (microphone), you need HTTPS:"
-    echo "   ./enable-https.sh"
+    echo "ℹ️  HTTP is working! All features work except:"
+    echo "   • Microphone recording (browsers require HTTPS for security)"
+    echo ""
+    echo "💡 Optional: Enable HTTPS only if you need microphone recording:"
+    echo "   ./enable-https.sh  (creates self-signed cert for personal use)"
 else
     echo "❌ Nginx is still restarting. Check logs:"
     echo "   docker compose -f docker-compose.full.yml logs nginx"
