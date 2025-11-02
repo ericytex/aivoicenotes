@@ -7,10 +7,12 @@ set -e
 
 VPS_IP="194.163.134.129"
 # Set your actual frontend URL here (or via FRONTEND_URL env var)
+# For full VPS deployment (frontend + backend), use deploy-full.sh instead
 # Examples:
 # - Vercel: https://your-app.vercel.app
 # - Local dev: http://localhost:5173
 # - Custom domain: https://yourdomain.com
+# - Full VPS: http://your-vps-ip (use deploy-full.sh)
 FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173}"
 PORT=3333
 
