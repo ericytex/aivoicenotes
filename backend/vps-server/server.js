@@ -13,6 +13,8 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 
 dotenv.config();
 
@@ -175,12 +177,11 @@ app.post('/api/auth/signup', express.json(), (req, res) => {
     }
 
     // Hash password
-    const bcrypt = require('bcryptjs');
     const salt = bcrypt.genSaltSync(10);
     const passwordHash = bcrypt.hashSync(password, salt);
 
     // Create user
-    const id = require('crypto').randomUUID();
+    const id = randomUUID();
     const now = new Date().toISOString();
 
     db.prepare(`
@@ -226,7 +227,6 @@ app.post('/api/auth/signin', express.json(), (req, res) => {
     }
 
     // Verify password
-    const bcrypt = require('bcryptjs');
     const isValid = bcrypt.compareSync(password, user.password_hash);
     if (!isValid) {
       return res.status(401).json({
