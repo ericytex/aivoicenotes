@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Enable HTTPS for VoiceNote (self-signed or Let's Encrypt)
+# NOTE: HTTPS is ONLY needed for microphone recording.
+# HTTP works fine for everything else on a personal server!
+
 # Automated HTTPS Setup Script for VoiceNote App
 # Sets up HTTPS with self-signed certificate or Let's Encrypt
 
