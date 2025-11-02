@@ -1,0 +1,38 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#17B8C4;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#2EE7D6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF6B4F;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="micGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F0F9FA;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGradient)"/>
+  
+  <!-- Microphone body -->
+  <rect x="200" y="140" width="112" height="200" rx="56" fill="url(#micGradient)"/>
+  
+  <!-- Microphone stand -->
+  <rect x="246" y="340" width="20" height="80" rx="10" fill="url(#micGradient)"/>
+  
+  <!-- Microphone base -->
+  <rect x="156" y="420" width="200" height="24" rx="12" fill="url(#micGradient)"/>
+  
+  <!-- Sound waves -->
+  <path d="M 120 200 Q 100 220 100 240 T 120 280" stroke="rgba(255,255,255,0.6)" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M 392 200 Q 412 220 412 240 T 392 280" stroke="rgba(255,255,255,0.6)" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M 80 160 Q 60 200 60 240 T 80 320" stroke="rgba(255,255,255,0.4)" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M 432 160 Q 452 200 452 240 T 432 320" stroke="rgba(255,255,255,0.4)" stroke-width="8" fill="none" stroke-linecap="round"/>
+  
+  <!-- AI sparkle -->
+  <g transform="translate(360, 100)">
+    <path d="M 0 -12 L 3 -3 L 12 0 L 3 3 L 0 12 L -3 3 L -12 0 L -3 -3 Z" fill="rgba(255,255,255,0.9)"/>
+    <circle cx="0" cy="0" r="4" fill="url(#micGradient)"/>
+  </g>
+</svg>
+
