@@ -1,6 +1,7 @@
 import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
 import { syncService } from './sync';
 import { serverSyncService } from './sync-server';
+import { generateUUID } from './uuid';
 
 // Types matching the Supabase schema
 export interface Note {
@@ -195,7 +196,7 @@ class DatabaseService {
     await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
 
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     const now = new Date().toISOString();
     const tagsJson = note.tags ? JSON.stringify(note.tags) : null;
 
@@ -422,7 +423,7 @@ class DatabaseService {
       throw new Error('User with this email already exists');
     }
 
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     const now = new Date().toISOString();
 
     this.db.run(

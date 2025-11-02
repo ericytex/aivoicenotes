@@ -6,7 +6,10 @@
 import { Note, NoteInsert, NoteUpdate } from './database';
 import { auth } from './auth';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+// Use relative path if VITE_API_URL is empty (same domain) or use provided URL
+// If VITE_API_URL is set, use it as-is. If empty, use '' so we can prepend /api
+const VITE_API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = VITE_API_URL || ''; // Empty string means same domain, we'll prepend /api
 
 interface ApiResponse<T> {
   success: boolean;
@@ -35,7 +38,7 @@ class ApiService {
     if (!API_URL) return false;
     
     try {
-      const response = await fetch(`${API_URL}/health`, {
+      const response = await fetch(`${API_URL || ''}/api/health`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -47,9 +50,8 @@ class ApiService {
 
   // Notes API
   async getNotes(): Promise<Note[]> {
-    if (!API_URL) throw new Error('API URL not configured');
     
-    const response = await fetch(`${API_URL}/api/notes`, {
+    const response = await fetch(`${API_URL || ''}/api/notes`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -69,7 +71,7 @@ class ApiService {
   async getNoteById(id: string): Promise<Note> {
     if (!API_URL) throw new Error('API URL not configured');
     
-    const response = await fetch(`${API_URL}/api/notes/${id}`, {
+    const response = await fetch(`${API_URL || ''}/api/notes/${id}`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -89,7 +91,7 @@ class ApiService {
   async createNote(note: NoteInsert): Promise<Note> {
     if (!API_URL) throw new Error('API URL not configured');
     
-    const response = await fetch(`${API_URL}/api/notes`, {
+    const response = await fetch(`${API_URL || ''}/api/notes`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(note),
@@ -110,7 +112,7 @@ class ApiService {
   async updateNote(id: string, updates: NoteUpdate): Promise<Note> {
     if (!API_URL) throw new Error('API URL not configured');
     
-    const response = await fetch(`${API_URL}/api/notes/${id}`, {
+    const response = await fetch(`${API_URL || ''}/api/notes/${id}`, {
       method: 'PATCH',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(updates),
@@ -131,7 +133,7 @@ class ApiService {
   async deleteNote(id: string): Promise<void> {
     if (!API_URL) throw new Error('API URL not configured');
     
-    const response = await fetch(`${API_URL}/api/notes/${id}`, {
+    const response = await fetch(`${API_URL || ''}/api/notes/${id}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
@@ -150,7 +152,7 @@ class ApiService {
   async syncNotes(localNotes: Note[]): Promise<{ notes: Note[]; conflicts: any[] }> {
     if (!API_URL) throw new Error('API URL not configured');
     
-    const response = await fetch(`${API_URL}/api/sync`, {
+    const response = await fetch(`${API_URL || ''}/api/sync`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify({ notes: localNotes }),
@@ -171,7 +173,7 @@ class ApiService {
   async getSyncStatus(): Promise<SyncStatus> {
     if (!API_URL) throw new Error('API URL not configured');
     
-    const response = await fetch(`${API_URL}/api/sync/status`, {
+    const response = await fetch(`${API_URL || ''}/api/sync/status`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     });
@@ -199,7 +201,7 @@ class ApiService {
     const user = auth.getCurrentUser();
     const session = auth.getSession();
 
-    const response = await fetch(`${API_URL}/api/notes/${noteId}/audio`, {
+    const response = await fetch(`${API_URL || ''}/api/notes/${noteId}/audio`, {
       method: 'POST',
       headers: {
         'Authorization': session ? `Bearer ${session}` : '',
@@ -221,7 +223,8 @@ class ApiService {
   }
 
   isConfigured(): boolean {
-    return !!API_URL;
+    // Always configured - uses relative /api if VITE_API_URL not set
+    return true;
   }
 }
 
