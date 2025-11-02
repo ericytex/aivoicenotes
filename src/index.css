@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Base colors */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
+    /* Card system */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary - Teal/Cyan */
+    --primary: 186 100% 40%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 186 100% 60%;
+
+    /* Secondary - Light teal */
+    --secondary: 186 50% 96%;
+    --secondary-foreground: 186 100% 30%;
+
+    /* Muted */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    /* Accent - Coral/Orange */
+    --accent: 14 100% 62%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 186 100% 40%;
+
+    /* Radius */
+    --radius: 0.75rem;
+
+    /* Custom gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(186 100% 40%), hsl(186 100% 60%));
+    --gradient-accent: linear-gradient(135deg, hsl(14 100% 62%), hsl(25 100% 58%));
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 100%), hsl(186 50% 98%));
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Base colors */
+    --background: 222 47% 8%;
+    --foreground: 0 0% 98%;
+
+    /* Card system */
+    --card: 222 47% 11%;
+    --card-foreground: 0 0% 98%;
+
+    /* Popover */
+    --popover: 222 47% 11%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Primary - Teal/Cyan */
+    --primary: 186 100% 50%;
+    --primary-foreground: 222 47% 8%;
+    --primary-glow: 186 100% 70%;
+
+    /* Secondary - Dark teal */
+    --secondary: 186 30% 20%;
+    --secondary-foreground: 186 100% 80%;
+
+    /* Muted */
+    --muted: 222 30% 20%;
+    --muted-foreground: 220 15% 65%;
+
+    /* Accent - Coral/Orange */
+    --accent: 14 100% 62%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive */
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Borders */
+    --border: 222 30% 20%;
+    --input: 222 30% 20%;
+    --ring: 186 100% 50%;
+
+    /* Custom gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(186 100% 50%), hsl(186 100% 70%));
+    --gradient-accent: linear-gradient(135deg, hsl(14 100% 62%), hsl(25 100% 58%));
+    --gradient-hero: linear-gradient(180deg, hsl(222 47% 8%), hsl(186 50% 12%));
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    /* Prevent double-tap zoom on iOS */
+    touch-action: manipulation;
+    /* Smooth scrolling on mobile */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent text selection on buttons for better mobile UX */
+  button {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Better touch targets for mobile */
+  @media (max-width: 640px) {
+    button, a, input, textarea, select {
+      min-height: 44px; /* iOS recommended minimum touch target */
+    }
+  }
+
+  /* Prevent pull-to-refresh on mobile (can interfere with recording) */
+  body {
+    overscroll-behavior-y: contain;
+  }
+}
