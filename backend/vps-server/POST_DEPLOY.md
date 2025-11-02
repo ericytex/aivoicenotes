@@ -15,6 +15,26 @@ The deployment script will:
 
 ## After Deployment Completes
 
+### Step 0: Configure External Access (Do This First!)
+
+```bash
+cd ~/voicenote-full/backend/vps-server
+
+# Run firewall configuration
+./configure-firewall.sh
+
+# Check access configuration
+./check-access.sh
+```
+
+This will:
+- Configure UFW/iptables to allow port 8888
+- Verify containers are running
+- Test local access
+- Show you the external URL
+
+**Important:** If using a cloud provider (DigitalOcean, AWS, etc.), also configure their firewall/security groups to allow port 8888.
+
 ### Step 1: Verify Everything is Running
 
 ```bash
