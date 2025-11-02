@@ -7,7 +7,8 @@ set -e
 
 VPS_IP="${VPS_IP:-194.163.134.129}"
 PORT=3333
-FRONTEND_URL="${FRONTEND_URL:-http://$VPS_IP}"
+NGINX_PORT="${NGINX_PORT:-8080}"
+FRONTEND_URL="${FRONTEND_URL:-http://$VPS_IP:$NGINX_PORT}"
 
 echo "🚀 VoiceNote Full Stack - Automated Deployment"
 echo "═══════════════════════════════════════════════"
@@ -28,6 +29,7 @@ fi
 echo -e "${YELLOW}📋 Configuration:${NC}"
 echo "   VPS IP: $VPS_IP"
 echo "   Frontend URL: $FRONTEND_URL"
+echo "   Frontend Port: $NGINX_PORT"
 echo "   Backend Port: $PORT"
 echo ""
 
@@ -260,11 +262,11 @@ done
 echo ""
 echo -e "${YELLOW}🔥 Configuring firewall...${NC}"
 if command -v ufw &> /dev/null; then
-    sudo ufw allow 80/tcp 2>/dev/null || true
-    sudo ufw allow 443/tcp 2>/dev/null || true
-    echo -e "${GREEN}✅ Firewall configured${NC}"
+    sudo ufw allow $NGINX_PORT/tcp 2>/dev/null || true
+    sudo ufw allow ${NGINX_HTTPS_PORT:-8443}/tcp 2>/dev/null || true
+    echo -e "${GREEN}✅ Firewall configured (ports $NGINX_PORT and ${NGINX_HTTPS_PORT:-8443})${NC}"
 else
-    echo -e "${YELLOW}⚠️  UFW not found. Please manually open ports 80 and 443${NC}"
+    echo -e "${YELLOW}⚠️  UFW not found. Please manually open ports $NGINX_PORT and ${NGINX_HTTPS_PORT:-8443}${NC}"
 fi
 
 # Summary
@@ -274,9 +276,9 @@ echo -e "${GREEN}✅ Full Stack Deployment Complete!${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════${NC}"
 echo ""
 echo -e "${YELLOW}📍 Service Information:${NC}"
-echo "   Frontend: http://$VPS_IP"
-echo "   API: http://$VPS_IP/api"
-echo "   Health: http://$VPS_IP/health"
+echo "   Frontend: http://$VPS_IP:$NGINX_PORT"
+echo "   API: http://$VPS_IP:$NGINX_PORT/api"
+echo "   Health: http://$VPS_IP:$NGINX_PORT/health"
 echo ""
 echo -e "${YELLOW}📊 Useful Commands:${NC}"
 echo "   View logs:     cd $DEPLOY_DIR/backend/vps-server && $COMPOSE_CMD -f docker-compose.full.yml logs -f"
@@ -292,12 +294,12 @@ echo "   4. cp -r dist/* backend/vps-server/nginx/html/frontend/"
 echo "   5. $COMPOSE_CMD -f backend/vps-server/docker-compose.full.yml restart nginx"
 echo ""
 echo -e "${YELLOW}📝 Next Steps:${NC}"
-echo "   1. Visit http://$VPS_IP in your browser"
-echo "   2. Test the API: curl http://$VPS_IP/health"
+echo "   1. Visit http://$VPS_IP:$NGINX_PORT in your browser"
+echo "   2. Test the API: curl http://$VPS_IP:$NGINX_PORT/health"
 echo "   3. Check logs if needed: $COMPOSE_CMD -f docker-compose.full.yml logs -f"
 echo "   4. Configure SSL (optional): See VPS_FULL_STACK.md"
 echo "   5. See POST_DEPLOY.md for detailed next steps"
 echo ""
-echo -e "${GREEN}✨ Deployment complete! Your app is live at http://$VPS_IP${NC}"
+echo -e "${GREEN}✨ Deployment complete! Your app is live at http://$VPS_IP:$NGINX_PORT${NC}"
 echo ""
 
