@@ -37,7 +37,7 @@ class ApiService {
   async healthCheck(): Promise<boolean> {
     
     try {
-      const response = await fetch(`${API_URL || ''}/api/health`, {
+      const response = await fetch(`${API_URL || ''}/health`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
