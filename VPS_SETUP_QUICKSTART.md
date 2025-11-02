@@ -23,7 +23,7 @@ pm2 startup
 
 Then in your frontend `.env`:
 ```env
-VITE_API_URL=http://your-vps-ip:3000
+VITE_API_URL=http://your-vps-ip:3333
 ```
 
 **Done!** Your database is now syncing across devices.
@@ -60,7 +60,7 @@ nano .env  # Edit configuration
 ### 2. Configure `.env`
 
 ```env
-PORT=3000
+PORT=3333
 CORS_ORIGIN=https://aivoicenotes.vercel.app
 DB_PATH=./voicenotes.db
 UPLOAD_DIR=./uploads
@@ -85,7 +85,7 @@ pm2 startup  # Auto-start on reboot
 
 In your frontend project root, create/update `.env`:
 ```env
-VITE_API_URL=http://your-vps-ip:3000
+VITE_API_URL=http://your-vps-ip:3333
 ```
 
 Or with domain:
@@ -97,7 +97,7 @@ VITE_API_URL=https://api.yourdomain.com
 
 ```bash
 # On VPS, test health endpoint
-curl http://localhost:3000/health
+curl http://localhost:3333/health
 
 # Should return: {"status":"ok","timestamp":"..."}
 ```
@@ -137,12 +137,12 @@ Once running, check:
 
 **Port already in use:**
 ```bash
-sudo netstat -tulpn | grep 3000
+sudo netstat -tulpn | grep 3333
 # Kill the process or change PORT in .env
 ```
 
 **Can't connect from frontend:**
-- Check firewall: `sudo ufw allow 3000/tcp`
+- Check firewall: `sudo ufw allow 3333/tcp`
 - Check CORS_ORIGIN in .env matches your frontend URL
 - Check server is running: `pm2 status`
 

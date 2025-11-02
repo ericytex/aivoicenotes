@@ -44,7 +44,7 @@ npm install
 cp .env.example .env
 nano .env
 # Edit with your settings:
-# PORT=3000
+# PORT=3333
 # CORS_ORIGIN=https://your-frontend-domain.com
 # DB_PATH=./voicenotes.db
 # UPLOAD_DIR=./uploads
@@ -58,10 +58,10 @@ npm start
 
 # Should see:
 # 🚀 VoiceNote API Server
-# ✅ Server running at http://0.0.0.0:3000
+# ✅ Server running at http://0.0.0.0:3333
 
 # Test in another terminal:
-curl http://localhost:3000/health
+curl http://localhost:3333/health
 # Should return: {"status":"ok","timestamp":"..."}
 ```
 
@@ -151,7 +151,7 @@ VITE_API_URL=https://api.yourdomain.com
 
 Or if no domain:
 ```env
-VITE_API_URL=http://your-vps-ip:3000
+VITE_API_URL=http://your-vps-ip:3333
 ```
 
 ## Step 9: Backup Setup
@@ -213,7 +213,7 @@ pm2 stop voicenote-api
 pm2 logs voicenote-api --lines 50
 
 # Check if port is in use
-sudo netstat -tulpn | grep 3000
+sudo netstat -tulpn | grep 3333
 ```
 
 **Nginx errors:**

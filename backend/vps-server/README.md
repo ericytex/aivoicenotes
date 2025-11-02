@@ -39,7 +39,7 @@ server {
     server_name api.yourdomain.com;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:3333;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -57,7 +57,7 @@ sudo certbot --nginx -d api.yourdomain.com
 
 ## Environment Variables
 
-- `PORT` - Server port (default: 3000)
+- `PORT` - Server port (default: 3333)
 - `CORS_ORIGIN` - Allowed CORS origin (your frontend URL)
 - `DB_PATH` - Path to SQLite database file
 - `UPLOAD_DIR` - Directory for audio file uploads
