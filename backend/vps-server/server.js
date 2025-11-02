@@ -199,9 +199,12 @@ app.post('/api/auth/signup', express.json(), (req, res) => {
     });
   } catch (error) {
     console.error('Signup error:', error);
+    console.error('Signup error details:', error.message);
+    console.error('Signup error stack:', error.stack);
     res.status(500).json({
       success: false,
-      error: 'Failed to create user'
+      error: error.message || 'Failed to create user',
+      details: process.env.NODE_ENV !== 'production' ? error.stack : undefined
     });
   }
 });
