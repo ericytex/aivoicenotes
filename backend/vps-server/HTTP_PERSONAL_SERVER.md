@@ -36,7 +36,19 @@ cd ~/voicenote-full/backend/vps-server
 # Choose "self-signed" when prompted
 ```
 
-**Note**: Your browser will show a security warning for self-signed certificates. This is normal for personal servers - just click "Advanced" → "Proceed to site" (or similar in your browser).
+**How it works:**
+- ✅ Browsers **will accept** self-signed certificates
+- ⚠️ They show a security warning the **first time** you visit
+- ✅ You click "Advanced" → "Proceed to site" (or "Accept Risk")
+- ✅ After that, it works normally (browser remembers your choice)
+- ✅ Microphone recording will work!
+
+**Browser-specific instructions:**
+- **Chrome/Edge**: Click "Advanced" → "Proceed to [site] (unsafe)"
+- **Firefox**: Click "Advanced" → "Accept the Risk and Continue"
+- **Safari**: Click "Show Details" → "visit this website"
+
+This is **one-time per browser** - after you accept it, you won't see the warning again unless you clear browser data.
 
 ### Option 3: Let's Encrypt (For Production/Domain)
 If you have a domain name and want a trusted certificate:
