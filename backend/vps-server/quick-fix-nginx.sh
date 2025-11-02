@@ -17,6 +17,12 @@ docker compose -f docker-compose.full.yml logs --tail=20 nginx 2>&1 | tail -10
 echo ""
 echo "Reverting to HTTP-only configuration..."
 
+# Ensure we're not trying to use HTTPS without certs
+if grep -q "ssl_certificate" nginx/conf.d/frontend.conf 2>/dev/null; then
+    echo "⚠️  HTTPS config detected but certificates missing"
+    echo "Removing HTTPS configuration..."
+fi
+
 # Restore original HTTP-only config
 cat > nginx/conf.d/frontend.conf <<'EOF'
 # VoiceNote Frontend + API Nginx Configuration
@@ -48,9 +54,9 @@ server {
         }
     }
 
-    # API proxy
+    # API proxy - must preserve /api prefix
     location /api {
-        proxy_pass http://voicenote-api;
+        proxy_pass http://194.163.134.129:3333;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -65,10 +71,12 @@ server {
         proxy_send_timeout 600s;
         proxy_read_timeout 600s;
     }
-
-    # Health check
+    
+    # Health check endpoint (no /api prefix)
     location /health {
-        proxy_pass http://voicenote-api/health;
+        proxy_pass http://194.163.134.129:3333/health;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
         access_log off;
     }
 

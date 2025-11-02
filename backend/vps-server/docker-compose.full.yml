@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile
     container_name: voicenote-api
     restart: unless-stopped
+    ports:
+      - "3333:3333"  # Expose backend port for direct access
     environment:
       - PORT=3333
       - CORS_ORIGIN=${CORS_ORIGIN:-*}
