@@ -22,7 +22,7 @@ class AuthService {
   private readonly SESSION_USER_KEY = 'voicenote_user';
 
   async signUp(data: SignUpData): Promise<User> {
-    // Check if user already exists
+    // Check if user already exists locally
     const existingUser = await db.getUserByEmail(data.email);
     if (existingUser) {
       throw new Error('User with this email already exists');
@@ -32,8 +32,40 @@ class AuthService {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(data.password, salt);
 
-    // Create user
-    const userId = await db.createUser(data.email, passwordHash);
+    // Create user locally first
+    let userId = await db.createUser(data.email, passwordHash);
+
+    // Try to create user on server if API is configured
+    const apiService = (await import('./api')).apiService;
+    if (apiService.isConfigured()) {
+      try {
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: data.email, password: data.password }),
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            // Use server's user ID to keep them in sync
+            const serverUserId = result.data.id;
+            if (serverUserId !== userId) {
+              // Update local user to use server ID
+              // Delete old user and create with server ID
+              await db.deleteUser(userId);
+              userId = await db.createUserWithId(serverUserId, data.email, passwordHash, false);
+            }
+            console.log('User created on server with ID:', serverUserId);
+          }
+        } else {
+          console.warn('Failed to create user on server, but user created locally');
+        }
+      } catch (error) {
+        console.warn('Could not create user on server:', error);
+        // Continue anyway - user is created locally
+      }
+    }
 
     // Create session
     const user = { id: userId, email: data.email, is_admin: false };
