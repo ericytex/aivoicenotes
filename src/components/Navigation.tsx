@@ -9,7 +9,8 @@ import {
   LogOut,
   Home,
   Menu,
-  X
+  X,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
@@ -121,7 +122,7 @@ const Navigation = () => {
             );
           })}
 
-          <div className="pt-4 mt-4 border-t border-border">
+          <div className="pt-4 mt-4 border-t border-border space-y-1">
             <Link
               to="/settings"
               className={cn(
@@ -135,6 +136,21 @@ const Navigation = () => {
               <Settings className="w-4 h-4" />
               Settings
             </Link>
+            {user?.is_admin && (
+              <Link
+                to="/admin"
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                  location.pathname === "/admin"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Shield className="w-4 h-4" />
+                Admin
+              </Link>
+            )}
           </div>
         </div>
 
@@ -245,7 +261,7 @@ const Navigation = () => {
                 );
               })}
 
-              <div className="pt-4 mt-4 border-t border-border">
+              <div className="pt-4 mt-4 border-t border-border space-y-1">
                 <Link
                   to="/settings"
                   className={cn(
@@ -259,6 +275,21 @@ const Navigation = () => {
                   <Settings className="w-5 h-5" />
                   Settings
                 </Link>
+                {user?.is_admin && (
+                  <Link
+                    to="/admin"
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-colors",
+                      location.pathname === "/admin"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-foreground hover:bg-accent"
+                    )}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Shield className="w-5 h-5" />
+                    Admin
+                  </Link>
+                )}
               </div>
             </div>
 

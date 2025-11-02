@@ -57,6 +57,8 @@ class DatabaseService {
         
         if (savedDb) {
           this.db = new SQL.Database(savedDb);
+          // Run migrations for existing databases
+          this.runMigrations();
         } else {
           this.db = new SQL.Database();
           this.createTables();
@@ -97,6 +99,7 @@ class DatabaseService {
         id TEXT PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
+        is_admin INTEGER DEFAULT 0,
         created_at TEXT NOT NULL
       )
     `);
@@ -104,6 +107,26 @@ class DatabaseService {
     // Create indexes
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id)`);
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(created_at DESC)`);
+  }
+
+  private runMigrations(): void {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      // Migration: Add is_admin column if it doesn't exist
+      const result = this.db.exec('PRAGMA table_info(users)');
+      if (result.length > 0) {
+        const columns = result[0].values.map((row: any[]) => row[1]);
+        if (!columns.includes('is_admin')) {
+          console.log('Running migration: Adding is_admin column to users table');
+          this.db.run('ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0');
+          this.saveToIndexedDB().catch(err => console.error('Error saving migration:', err));
+        }
+      }
+    } catch (error) {
+      console.error('Migration error:', error);
+      // If migration fails, continue anyway
+    }
   }
 
   private async loadFromIndexedDB(): Promise<Uint8Array | null> {
@@ -343,7 +366,7 @@ class DatabaseService {
   }
 
   // User operations for authentication
-  async createUser(email: string, passwordHash: string): Promise<string> {
+  async createUser(email: string, passwordHash: string, isAdmin: boolean = false): Promise<string> {
     await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
 
@@ -357,19 +380,19 @@ class DatabaseService {
     const now = new Date().toISOString();
 
     this.db.run(
-      `INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)`,
-      [id, email, passwordHash, now]
+      `INSERT INTO users (id, email, password_hash, is_admin, created_at) VALUES (?, ?, ?, ?, ?)`,
+      [id, email, passwordHash, isAdmin ? 1 : 0, now]
     );
     await this.saveToIndexedDB();
     return id;
   }
 
-  async getUserByEmail(email: string): Promise<{ id: string; email: string; password_hash: string } | null> {
+  async getUserByEmail(email: string): Promise<{ id: string; email: string; password_hash: string; is_admin: boolean } | null> {
     await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
 
     try {
-      const stmt = this.db.prepare('SELECT id, email, password_hash FROM users WHERE email = ?');
+      const stmt = this.db.prepare('SELECT id, email, password_hash, is_admin FROM users WHERE email = ?');
       stmt.bind([email]);
       
       if (!stmt.step()) {
@@ -381,11 +404,12 @@ class DatabaseService {
       const row = stmt.getAsObject();
       stmt.free();
 
-      console.log('User found:', { id: row.id, email: row.email, hasPassword: !!row.password_hash });
+      console.log('User found:', { id: row.id, email: row.email, hasPassword: !!row.password_hash, isAdmin: !!row.is_admin });
       return {
         id: row.id as string,
         email: row.email as string,
         password_hash: row.password_hash as string,
+        is_admin: Boolean(row.is_admin),
       };
     } catch (error) {
       console.error('Error getting user by email:', error);
@@ -393,11 +417,11 @@ class DatabaseService {
     }
   }
 
-  async getUserById(id: string): Promise<{ id: string; email: string } | null> {
+  async getUserById(id: string): Promise<{ id: string; email: string; is_admin: boolean } | null> {
     await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare('SELECT id, email FROM users WHERE id = ?');
+    const stmt = this.db.prepare('SELECT id, email, is_admin FROM users WHERE id = ?');
     stmt.bind([id]);
     
     if (!stmt.step()) {
@@ -411,7 +435,47 @@ class DatabaseService {
     return {
       id: row.id as string,
       email: row.email as string,
+      is_admin: Boolean(row.is_admin),
     };
+  }
+
+  async getAllUsers(): Promise<Array<{ id: string; email: string; is_admin: boolean; created_at: string }>> {
+    await this.ensureInitialized();
+    if (!this.db) throw new Error('Database not initialized');
+
+    const stmt = this.db.prepare('SELECT id, email, is_admin, created_at FROM users ORDER BY created_at DESC');
+    
+    const users: Array<{ id: string; email: string; is_admin: boolean; created_at: string }> = [];
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      users.push({
+        id: row.id as string,
+        email: row.email as string,
+        is_admin: Boolean(row.is_admin),
+        created_at: row.created_at as string,
+      });
+    }
+    stmt.free();
+
+    return users;
+  }
+
+  async setUserAdmin(userId: string, isAdmin: boolean): Promise<void> {
+    await this.ensureInitialized();
+    if (!this.db) throw new Error('Database not initialized');
+
+    this.db.run('UPDATE users SET is_admin = ? WHERE id = ?', [isAdmin ? 1 : 0, userId]);
+    await this.saveToIndexedDB();
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    await this.ensureInitialized();
+    if (!this.db) throw new Error('Database not initialized');
+
+    // Also delete user's notes
+    this.db.run('DELETE FROM notes WHERE user_id = ?', [userId]);
+    this.db.run('DELETE FROM users WHERE id = ?', [userId]);
+    await this.saveToIndexedDB();
   }
 }
 

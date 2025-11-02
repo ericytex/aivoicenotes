@@ -15,6 +15,8 @@ import SharedNote from "./pages/SharedNote";
 import Settings from "./pages/Settings";
 import Upload from "./pages/Upload";
 import ImageUpload from "./pages/ImageUpload";
+import Admin from "./pages/Admin";
+import CreateAdmin from "./pages/CreateAdmin";
 import NotFound from "./pages/NotFound";
 import { cn } from "@/lib/utils";
 
@@ -38,9 +40,10 @@ const AppLayout = () => {
           <Route path="/image-upload" element={<ImageUpload />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/notes/:id" element={<NoteDetail />} />
-          <Route path="/notes/:id/chat" element={<NoteChat />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<NotFound />} />
+                      <Route path="/notes/:id/chat" element={<NoteChat />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/admin" element={<Admin />} />
+                      <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
     </div>
@@ -56,6 +59,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/create-admin" element={<CreateAdmin />} />
             <Route path="/shared/:token" element={<SharedNote />} />
             <Route path="/*" element={<AppLayout />} />
           </Routes>

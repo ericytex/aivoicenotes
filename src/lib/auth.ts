@@ -4,6 +4,7 @@ import { db } from './database';
 export interface User {
   id: string;
   email: string;
+  is_admin?: boolean;
 }
 
 export interface SignUpData {
@@ -35,7 +36,7 @@ class AuthService {
     const userId = await db.createUser(data.email, passwordHash);
 
     // Create session
-    const user = { id: userId, email: data.email };
+    const user = { id: userId, email: data.email, is_admin: false };
     this.setSession(userId, user);
 
     return user;
@@ -60,7 +61,7 @@ class AuthService {
       }
 
       // Create session
-      const userData = { id: user.id, email: user.email };
+      const userData = { id: user.id, email: user.email, is_admin: user.is_admin };
       this.setSession(user.id, userData);
 
       console.log('Sign in successful for user:', user.email);
