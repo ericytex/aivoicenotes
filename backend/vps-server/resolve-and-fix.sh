@@ -9,19 +9,32 @@ echo "════════════════════════�
 echo ""
 
 cd "$(dirname "$0")"
+SCRIPT_DIR="$PWD"
+
+# Try to find git repo (might be in parent directory)
+GIT_DIR="$SCRIPT_DIR"
+while [ ! -d "$GIT_DIR/.git" ] && [ "$GIT_DIR" != "/" ]; do
+    GIT_DIR="$(dirname "$GIT_DIR")"
+done
 
 # Backup local changes (if in git repo)
 echo "1. Checking for local changes..."
-if [ -d ".git" ]; then
+if [ -d "$GIT_DIR/.git" ]; then
+    echo "   Found git repo at: $GIT_DIR"
+    cd "$GIT_DIR"
     echo "   Stashing local changes (if any)..."
     git stash push -m "Local Nginx config changes before fix" 2>/dev/null || echo "   No local changes to stash"
     
     echo ""
     echo "2. Pulling latest changes..."
     git pull || echo "   Git pull failed or not needed"
+    cd "$SCRIPT_DIR"
 else
-    echo "   Not a git repository, skipping git operations"
+    echo "   Not in a git repository, skipping git operations"
 fi
+
+# Return to script directory
+cd "$SCRIPT_DIR"
 
 # Now run the fix
 echo ""
