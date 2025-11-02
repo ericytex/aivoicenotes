@@ -32,11 +32,15 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --chown=nodejs:nodejs . .
 
 # Create directories for database and uploads
-RUN mkdir -p /app/data /app/uploads && \
-    chown -R nodejs:nodejs /app/data /app/uploads
+# Note: These will be overridden by volume mounts, but ensure they exist
+RUN mkdir -p /app/data /app/uploads
 
 # Switch to non-root user
 USER nodejs
+
+# Create directories as nodejs user (will be used if volumes are empty)
+# This is a workaround for volume permission issues
+RUN mkdir -p /app/data /app/uploads || true
 
 # Expose port
 EXPOSE 3333

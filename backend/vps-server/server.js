@@ -24,9 +24,17 @@ const PORT = process.env.PORT || 3333;
 const DB_PATH = process.env.DB_PATH || join(__dirname, 'voicenotes.db');
 const UPLOAD_DIR = process.env.UPLOAD_DIR || join(__dirname, 'uploads');
 
+// Ensure data directory exists (for database)
+const dataDir = process.env.DB_PATH ? dirname(process.env.DB_PATH) : __dirname;
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+  console.log('✅ Created data directory:', dataDir);
+}
+
 // Ensure upload directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  console.log('✅ Created upload directory:', UPLOAD_DIR);
 }
 
 // Middleware
@@ -48,10 +56,19 @@ app.use((req, res, next) => {
 // Initialize SQLite database
 let db;
 try {
+  // Ensure parent directory exists before creating database
+  const dbDir = dirname(DB_PATH);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+  
   db = new Database(DB_PATH);
   console.log('✅ Database connected:', DB_PATH);
 } catch (error) {
   console.error('❌ Database connection failed:', error);
+  console.error('   DB_PATH:', DB_PATH);
+  console.error('   Data directory exists:', fs.existsSync(dirname(DB_PATH)));
+  console.error('   Data directory writable:', fs.accessSync(dirname(DB_PATH), fs.constants.W_OK) !== undefined ? 'yes' : 'no');
   process.exit(1);
 }
 
