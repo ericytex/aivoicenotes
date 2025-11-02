@@ -35,7 +35,6 @@ class ApiService {
   }
 
   async healthCheck(): Promise<boolean> {
-    if (!API_URL) return false;
     
     try {
       const response = await fetch(`${API_URL || ''}/api/health`, {
@@ -69,7 +68,6 @@ class ApiService {
   }
 
   async getNoteById(id: string): Promise<Note> {
-    if (!API_URL) throw new Error('API URL not configured');
     
     const response = await fetch(`${API_URL || ''}/api/notes/${id}`, {
       method: 'GET',
@@ -89,7 +87,6 @@ class ApiService {
   }
 
   async createNote(note: NoteInsert): Promise<Note> {
-    if (!API_URL) throw new Error('API URL not configured');
     
     const response = await fetch(`${API_URL || ''}/api/notes`, {
       method: 'POST',
@@ -110,7 +107,6 @@ class ApiService {
   }
 
   async updateNote(id: string, updates: NoteUpdate): Promise<Note> {
-    if (!API_URL) throw new Error('API URL not configured');
     
     const response = await fetch(`${API_URL || ''}/api/notes/${id}`, {
       method: 'PATCH',
@@ -131,7 +127,6 @@ class ApiService {
   }
 
   async deleteNote(id: string): Promise<void> {
-    if (!API_URL) throw new Error('API URL not configured');
     
     const response = await fetch(`${API_URL || ''}/api/notes/${id}`, {
       method: 'DELETE',
@@ -150,7 +145,6 @@ class ApiService {
 
   // Sync API
   async syncNotes(localNotes: Note[]): Promise<{ notes: Note[]; conflicts: any[] }> {
-    if (!API_URL) throw new Error('API URL not configured');
     
     const response = await fetch(`${API_URL || ''}/api/sync`, {
       method: 'POST',
@@ -171,7 +165,6 @@ class ApiService {
   }
 
   async getSyncStatus(): Promise<SyncStatus> {
-    if (!API_URL) throw new Error('API URL not configured');
     
     const response = await fetch(`${API_URL || ''}/api/sync/status`, {
       method: 'GET',
@@ -192,7 +185,6 @@ class ApiService {
 
   // Audio upload
   async uploadAudio(noteId: string, audioBlob: Blob): Promise<string> {
-    if (!API_URL) throw new Error('API URL not configured');
     
     const formData = new FormData();
     formData.append('audio', audioBlob, `${noteId}.webm`);
