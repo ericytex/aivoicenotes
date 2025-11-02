@@ -42,22 +42,36 @@ class AuthService {
   }
 
   async signIn(data: SignInData): Promise<User> {
-    const user = await db.getUserByEmail(data.email);
-    if (!user) {
-      throw new Error('Invalid email or password');
+    try {
+      // Ensure database is initialized
+      await db.ensureInitialized();
+      
+      const user = await db.getUserByEmail(data.email);
+      if (!user) {
+        console.error('Sign in failed: User not found for email:', data.email);
+        throw new Error('Invalid email or password');
+      }
+
+      // Verify password
+      const isValid = await bcrypt.compare(data.password, user.password_hash);
+      if (!isValid) {
+        console.error('Sign in failed: Password mismatch for email:', data.email);
+        throw new Error('Invalid email or password');
+      }
+
+      // Create session
+      const userData = { id: user.id, email: user.email };
+      this.setSession(user.id, userData);
+
+      console.log('Sign in successful for user:', user.email);
+      return userData;
+    } catch (error) {
+      console.error('Sign in error:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('An error occurred during sign in');
     }
-
-    // Verify password
-    const isValid = await bcrypt.compare(data.password, user.password_hash);
-    if (!isValid) {
-      throw new Error('Invalid email or password');
-    }
-
-    // Create session
-    const userData = { id: user.id, email: user.email };
-    this.setSession(user.id, userData);
-
-    return userData;
   }
 
   signOut(): void {

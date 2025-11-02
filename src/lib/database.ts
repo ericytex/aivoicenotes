@@ -368,22 +368,29 @@ class DatabaseService {
     await this.ensureInitialized();
     if (!this.db) throw new Error('Database not initialized');
 
-    const stmt = this.db.prepare('SELECT id, email, password_hash FROM users WHERE email = ?');
-    stmt.bind([email]);
-    
-    if (!stmt.step()) {
+    try {
+      const stmt = this.db.prepare('SELECT id, email, password_hash FROM users WHERE email = ?');
+      stmt.bind([email]);
+      
+      if (!stmt.step()) {
+        stmt.free();
+        console.log('No user found with email:', email);
+        return null;
+      }
+
+      const row = stmt.getAsObject();
       stmt.free();
-      return null;
+
+      console.log('User found:', { id: row.id, email: row.email, hasPassword: !!row.password_hash });
+      return {
+        id: row.id as string,
+        email: row.email as string,
+        password_hash: row.password_hash as string,
+      };
+    } catch (error) {
+      console.error('Error getting user by email:', error);
+      throw error;
     }
-
-    const row = stmt.getAsObject();
-    stmt.free();
-
-    return {
-      id: row.id as string,
-      email: row.email as string,
-      password_hash: row.password_hash as string,
-    };
   }
 
   async getUserById(id: string): Promise<{ id: string; email: string } | null> {
