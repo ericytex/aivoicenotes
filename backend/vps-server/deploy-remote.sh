@@ -7,7 +7,8 @@ set -e
 
 VPS_IP="194.163.134.129"
 VPS_USER="${VPS_USER:-root}"
-FRONTEND_URL="${FRONTEND_URL:-https://aivoicenotes.vercel.app}"
+# Set your actual frontend URL here (or via FRONTEND_URL env var)
+FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173}"
 
 echo "🚀 VoiceNote API - Remote Deployment"
 echo "═══════════════════════════════════════"

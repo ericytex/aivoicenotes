@@ -6,7 +6,12 @@
 set -e
 
 VPS_IP="194.163.134.129"
-FRONTEND_URL="${FRONTEND_URL:-https://aivoicenotes.vercel.app}"
+# Set your actual frontend URL here (or via FRONTEND_URL env var)
+# Examples:
+# - Vercel: https://your-app.vercel.app
+# - Local dev: http://localhost:5173
+# - Custom domain: https://yourdomain.com
+FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173}"
 PORT=3333
 
 echo "🚀 VoiceNote API - Automated Deployment"
@@ -30,6 +35,11 @@ echo "   VPS IP: $VPS_IP"
 echo "   Frontend URL: $FRONTEND_URL"
 echo "   Port: $PORT"
 echo ""
+if [ "$FRONTEND_URL" = "http://localhost:5173" ]; then
+    echo -e "${YELLOW}⚠️  Using default localhost. Set FRONTEND_URL if you have a deployed frontend.${NC}"
+    echo "   Example: FRONTEND_URL=https://your-app.vercel.app ./deploy.sh"
+    echo ""
+fi
 
 # Check Docker
 if ! command -v docker &> /dev/null; then
